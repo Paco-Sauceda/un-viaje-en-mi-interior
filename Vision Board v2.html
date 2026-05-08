@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vision Board Personal · Interactivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1b2a;
+    --bg-2:#11233a;
+    --card:#152a44;
+    --card-2:#17304e;
+    --line:rgba(255,255,255,.10);
+    --line-strong:rgba(255,255,255,.18);
+    --text:#eaf1fb;
+    --muted:#8aa1bd;
+    --accent:#378add;
+    --accent-soft:rgba(55,138,221,.14);
+    --accent-line:rgba(55,138,221,.45);
+    --green:#1d9e75;
+    --green-soft:rgba(29,158,117,.14);
+    --green-line:rgba(29,158,117,.45);
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(55,138,221,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(29,158,117,.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.55;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{ max-width:1180px; margin:0 auto; padding:48px 40px 64px; }
+
+  /* ===== Toolbar ===== */
+  .toolbar{
+    position:sticky; top:16px; z-index:20;
+    display:flex; gap:8px; justify-content:flex-end; margin-bottom:24px;
+  }
+  .btn{
+    appearance:none; border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.04); color:var(--text);
+    padding:9px 14px; border-radius:999px; font:500 13px/1 'Manrope',sans-serif;
+    cursor:pointer; letter-spacing:.02em;
+    transition:background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  .btn:hover{background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.28)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:#2877c8; border-color:#2877c8}
+
+  /* ===== Header ===== */
+  .header{
+    display:grid; grid-template-columns:1fr auto; gap:32px; align-items:end;
+    padding-bottom:24px; border-bottom:1px solid var(--line); margin-bottom:32px;
+  }
+  .eyebrow{
+    font:500 12px/1 'JetBrains Mono',monospace;
+    color:var(--accent); letter-spacing:.18em; text-transform:uppercase;
+    margin-bottom:14px;
+    display:inline-flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:""; width:24px; height:1px; background:var(--accent); }
+  h1{ font-weight:700; font-size:54px; line-height:1.05; letter-spacing:-.02em; margin:0 0 14px; }
+  .subtitle{ font-size:18px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; }
+  .subtitle .value{color:var(--text); font-weight:500}
+  .subtitle .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font:500 12px/1 'JetBrains Mono',monospace;
+    letter-spacing:.08em; text-transform:uppercase;
+  }
+  .pill.intel{ background:var(--accent-soft); color:#9cc6ee; border:1px solid var(--accent-line) }
+  .pill.fin{ background:var(--green-soft); color:#7ed3b1; border:1px solid var(--green-line) }
+  .pill .dot{ width:6px; height:6px; border-radius:50%; }
+  .pill.intel .dot{background:var(--accent)}
+  .pill.fin .dot{background:var(--green)}
+
+  .meta{
+    text-align:right;
+    font:500 12px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.12em; text-transform:uppercase;
+  }
+  .meta .student{
+    display:block; margin-top:10px;
+    font-family:'Manrope',sans-serif; font-weight:600; font-size:18px;
+    color:var(--text); letter-spacing:0; text-transform:none;
+  }
+  .meta .when{ display:block; margin-top:8px; font-size:12px; }
+
+  /* ===== Cards ===== */
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:28px;
+    position:relative;
+    break-inside:avoid;
+    margin-bottom:20px;
+  }
+  .card.full{grid-column:1 / -1}
+  .card-head{ display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+  .card-num{
+    font:500 11px/1 'JetBrains Mono',monospace;
+    color:var(--accent); letter-spacing:.12em;
+    border:1px solid var(--accent-line);
+    padding:6px 9px; border-radius:6px;
+    background:var(--accent-soft);
+  }
+  .card-title{
+    font-family:'Manrope',sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--muted);
+    margin:0;
+  }
+  .card-tag{
+    margin-left:auto;
+    font:500 11px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.14em; text-transform:uppercase;
+  }
+
+  .field-label{
+    font:500 11px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:8px;
+  }
+
+  /* Editable */
+  [contenteditable]{ outline:none; border-radius:6px;
+    transition:background .15s ease, box-shadow .15s ease; }
+  [contenteditable]:hover{ background:rgba(255,255,255,.03); }
+  [contenteditable]:focus{ background:rgba(55,138,221,.08); box-shadow:0 0 0 1px var(--accent-line) inset; }
+  [contenteditable]:empty::before{ content:attr(data-placeholder); color:var(--muted); opacity:.55; }
+
+  /* Valor central */
+  .valor-display{
+    font-weight:700; font-size:64px; line-height:1; letter-spacing:-.025em;
+    margin:6px 0 18px; padding:6px 4px;
+  }
+  .valor-frase{
+    font-size:17px; color:var(--text); opacity:.88; line-height:1.6;
+    padding:14px 4px 4px; border-top:1px solid var(--line);
+  }
+  .valor-frase::before{
+    content:"\201C"; color:var(--accent); font-size:28px; font-weight:700;
+    margin-right:6px; line-height:0; vertical-align:-4px;
+  }
+
+  /* Dimensión cards */
+  .dim-card .card-num.fin{ color:#7ed3b1; background:var(--green-soft); border-color:var(--green-line) }
+  .dim-name{
+    font-weight:600; font-size:26px; line-height:1.15; letter-spacing:-.015em;
+    padding:4px; margin:0 0 16px;
+  }
+  .dim-name .accent-dot{
+    display:inline-block; width:10px; height:10px; border-radius:50%;
+    background:var(--accent); margin-right:10px; vertical-align:middle; transform:translateY(-3px);
+  }
+  .dim-card.fin .dim-name .accent-dot{ background:var(--green); }
+  .compare-block{ margin-top:8px; }
+  .compare-block + .compare-block{ margin-top:14px; }
+  .state-actual, .state-deseado{
+    padding:14px 16px; border-radius:10px; line-height:1.55; font-size:14.5px;
+  }
+  .state-actual{ background:rgba(255,255,255,.025); border:1px solid var(--line); }
+  .state-deseado{ background:var(--accent-soft); border:1px solid var(--accent-line); }
+  .dim-card.fin .state-deseado{ background:var(--green-soft); border:1px solid var(--green-line); }
+
+  /* SMART list */
+  .smart-list{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:6px; }
+  .smart-item{
+    border:1px solid var(--line);
+    border-radius:10px; padding:16px 18px;
+    background:rgba(255,255,255,.015);
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .smart-letter{
+    flex:0 0 auto; width:38px; height:38px;
+    display:grid; place-items:center; border-radius:8px;
+    background:var(--accent-soft); border:1px solid var(--accent-line);
+    color:var(--accent); font-weight:700; font-size:18px;
+  }
+  .fin .smart-letter{ background:var(--green-soft); border-color:var(--green-line); color:#7ed3b1 }
+  .smart-body{flex:1; min-width:0}
+  .smart-name{
+    font:500 11px/1 'JetBrains Mono',monospace;
+    color:var(--accent); letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .fin .smart-name{ color:#7ed3b1 }
+  .smart-name .word{color:var(--text); font-weight:500}
+  .smart-name .dot{color:var(--muted); margin:0 6px}
+  .smart-text{ font-size:14.5px; line-height:1.55; color:var(--text); opacity:.92; padding:2px; }
+
+  /* ===== Tracker ===== */
+  .tracker-head{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .week-nav{
+    display:inline-flex; align-items:center; gap:4px;
+    border:1px solid var(--line-strong); border-radius:999px; padding:3px;
+  }
+  .week-nav button{
+    appearance:none; background:transparent; border:0; color:var(--text);
+    width:28px; height:28px; border-radius:50%; cursor:pointer;
+    display:grid; place-items:center; font-size:14px;
+  }
+  .week-nav button:hover{ background:rgba(255,255,255,.08) }
+  .week-nav .week-label{
+    font:500 12px/1 'JetBrains Mono',monospace;
+    letter-spacing:.08em; padding:0 12px; color:var(--text);
+  }
+
+  .tracker-table{
+    width:100%; border-collapse:separate; border-spacing:0;
+    margin-top:6px;
+  }
+  .tracker-table th, .tracker-table td{
+    padding:10px 6px; text-align:center; vertical-align:middle;
+  }
+  .tracker-table thead th{
+    font:500 10.5px/1.2 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.14em; text-transform:uppercase;
+    border-bottom:1px solid var(--line);
+    padding-bottom:14px;
+  }
+  .tracker-table thead th.day-today{ color:var(--accent); }
+  .tracker-table thead th.day-num{ display:block; font-size:14px; font-weight:600; color:var(--text); margin-top:4px; letter-spacing:0; text-transform:none; font-family:'Manrope',sans-serif }
+  .tracker-table thead th.day-today .day-num{ color:var(--accent); }
+  .tracker-table tbody td{ border-bottom:1px solid var(--line); }
+  .tracker-table tbody tr:last-child td{ border-bottom:0 }
+  .tracker-table .habit{
+    text-align:left; padding-left:0; padding-right:14px;
+    font-size:14px; line-height:1.4; color:var(--text);
+    width:38%;
+  }
+  .tracker-table .habit .badge{
+    display:inline-block; font:500 10px/1 'JetBrains Mono',monospace;
+    letter-spacing:.12em; text-transform:uppercase;
+    padding:3px 7px; border-radius:4px; margin-right:10px;
+    vertical-align:1px;
+  }
+  .tracker-table .habit .badge.intel{ color:#9cc6ee; background:var(--accent-soft); border:1px solid var(--accent-line) }
+  .tracker-table .habit .badge.fin{ color:#7ed3b1; background:var(--green-soft); border:1px solid var(--green-line) }
+  .tracker-table .pct{
+    text-align:right; padding-right:0; padding-left:14px;
+    font:500 13px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.04em; width:64px;
+  }
+  .tracker-table .pct.is-high{ color:var(--text) }
+
+  /* checkbox */
+  .chk{
+    --c: var(--accent);
+    --cs: var(--accent-soft);
+    --cl: var(--accent-line);
+    appearance:none; -webkit-appearance:none;
+    width:26px; height:26px; border-radius:7px;
+    border:1.5px solid var(--line-strong);
+    background:rgba(255,255,255,.025);
+    cursor:pointer; position:relative;
+    transition:background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  .chk:hover{ border-color:var(--cl); background:var(--cs) }
+  .chk:checked{ background:var(--c); border-color:var(--c); }
+  .chk:checked::after{
+    content:""; position:absolute; left:7px; top:3px;
+    width:8px; height:13px; border:solid #fff;
+    border-width:0 2px 2px 0; transform:rotate(45deg);
+  }
+  .chk.fin{ --c:var(--green); --cs:var(--green-soft); --cl:var(--green-line); }
+  .tracker-table td.is-today { position:relative; }
+  .tracker-table td.is-today::before{
+    content:""; position:absolute; left:50%; bottom:6px; transform:translateX(-50%);
+    width:6px; height:2px; border-radius:1px; background:var(--accent); opacity:.7;
+  }
+
+  .tracker-summary{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px;
+  }
+  .summary-tile{
+    border:1px solid var(--line); border-radius:10px; padding:16px 18px;
+    background:rgba(255,255,255,.018);
+  }
+  .summary-tile .label{
+    font:500 10.5px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:8px;
+  }
+  .summary-tile .value{
+    font-weight:700; font-size:32px; letter-spacing:-.02em;
+  }
+  .summary-tile.intel .value{ color:var(--accent) }
+  .summary-tile.fin .value{ color:var(--green) }
+  .summary-tile.total .value{ color:var(--text) }
+  .summary-bar{
+    height:4px; border-radius:2px; background:rgba(255,255,255,.06); margin-top:10px; overflow:hidden;
+  }
+  .summary-bar > span{ display:block; height:100%; border-radius:2px; transition:width .3s ease; }
+  .summary-tile.intel .summary-bar > span{ background:var(--accent) }
+  .summary-tile.fin .summary-bar > span{ background:var(--green) }
+  .summary-tile.total .summary-bar > span{ background:linear-gradient(90deg,var(--accent),var(--green)) }
+
+  /* ===== Stream graph ===== */
+  .chart-wrap{ position:relative; margin-top:8px; }
+  #stream{ width:100%; height:340px; display:block; overflow:visible; }
+  .chart-legend{
+    display:flex; gap:18px; flex-wrap:wrap; margin-top:14px;
+    font:500 12px/1 'JetBrains Mono',monospace; color:var(--muted); letter-spacing:.08em; text-transform:uppercase;
+  }
+  .chart-legend .item{ display:inline-flex; align-items:center; gap:8px; }
+  .chart-legend .swatch{ width:14px; height:14px; border-radius:3px; }
+  .chart-legend .swatch.intel{ background:var(--accent) }
+  .chart-legend .swatch.fin{ background:var(--green) }
+  .chart-legend .source{
+    margin-left:auto; font-size:11px; letter-spacing:.12em;
+  }
+  .chart-legend .source[data-source="real"]{ color:var(--accent) }
+  .chart-tooltip{
+    position:absolute; pointer-events:none; opacity:0;
+    background:rgba(13,27,42,.96); border:1px solid var(--line-strong);
+    color:var(--text); border-radius:8px; padding:10px 12px;
+    font-size:13px; line-height:1.4; min-width:160px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    transform:translate(-50%,-110%); transition:opacity .12s ease;
+    backdrop-filter:blur(6px);
+  }
+  .chart-tooltip .ttl{
+    font:500 11px/1 'JetBrains Mono',monospace; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px;
+  }
+  .chart-tooltip .row{ display:flex; align-items:center; gap:8px; }
+  .chart-tooltip .row + .row{ margin-top:4px; }
+  .chart-tooltip .row .sw{ width:8px; height:8px; border-radius:2px; }
+  .chart-tooltip .row .name{ flex:1; color:var(--muted); font-size:12px; }
+  .chart-tooltip .row .v{ font-weight:600; font-variant-numeric:tabular-nums; }
+
+  .axis text{ font:500 11px/1 'JetBrains Mono',monospace; fill:var(--muted); letter-spacing:.06em; }
+  .axis path, .axis line{ stroke:var(--line); }
+  .grid line{ stroke:rgba(255,255,255,.05); stroke-dasharray:2,3; }
+  .grid path{ stroke:none; }
+
+  /* ===== Reflexión ===== */
+  .reflex-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .reflex-tile{
+    border:1px solid var(--line); border-radius:10px; padding:18px;
+    background:rgba(255,255,255,.018);
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .reflex-tile .head{
+    display:flex; align-items:center; gap:10px;
+    font:500 11px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .reflex-tile .head .ico{ font-size:14px; }
+  .reflex-tile.ok .head{ color:#7ed3b1 }
+  .reflex-tile.warn .head{ color:#e8b66a }
+  .reflex-tile.fix .head{ color:#9cc6ee }
+  .reflex-tile .body{
+    font-size:14.5px; line-height:1.55; color:var(--text); opacity:.92;
+    min-height:84px;
+  }
+
+  /* Footer */
+  .footer{
+    margin-top:40px; padding-top:22px; border-top:1px solid var(--line);
+    display:grid; grid-template-columns:auto 1fr; gap:32px; align-items:center;
+  }
+  .footer .date{
+    font:500 12px/1 'JetBrains Mono',monospace;
+    color:var(--muted); letter-spacing:.14em; text-transform:uppercase; white-space:nowrap;
+  }
+  .footer .quote{
+    font-size:16px; color:var(--text); opacity:.9; font-style:italic;
+    text-align:right; line-height:1.5;
+  }
+  .footer .quote::before{ content:"— "; color:var(--accent); font-style:normal; }
+
+  /* Responsive */
+  @media (max-width:900px){
+    .page{padding:28px 20px 48px}
+    h1{font-size:38px}
+    .header{grid-template-columns:1fr; gap:18px}
+    .meta{text-align:left}
+    .grid-2{grid-template-columns:1fr}
+    .reflex-grid{grid-template-columns:1fr}
+    .tracker-summary{grid-template-columns:1fr}
+    .valor-display{font-size:46px}
+    .footer{grid-template-columns:1fr; gap:12px}
+    .footer .quote{text-align:left}
+    .tracker-table .habit{ width:auto }
+    .tracker-table .pct{ display:none }
+  }
+
+  /* Print */
+  @media print{
+    @page{size:A4; margin:14mm}
+    html,body{background:#fff !important; color:#0d1b2a !important}
+    body{ font-size:10.5pt; background:#fff !important; }
+    .toolbar{display:none !important}
+    .week-nav button{display:none !important}
+    .page{max-width:none; padding:0}
+    [contenteditable]:empty::before{content:""}
+    [contenteditable]{background:transparent !important; box-shadow:none !important}
+
+    h1{color:#0d1b2a; font-size:26pt}
+    .eyebrow,.card-num,.smart-letter,.smart-name,.footer .quote::before,.subtitle .pill{color:#1f63a8 !important}
+    .header,.card,.tracker-table thead th, .tracker-table tbody td{border-color:#cfd8e3 !important}
+    .meta,.field-label,.card-title,.footer .date,.card-tag{color:#5a6b80 !important}
+    .subtitle{color:#5a6b80 !important}
+    .subtitle .value,.meta .student{color:#0d1b2a !important}
+    .card{ background:#fff !important; border:1px solid #cfd8e3 !important; box-shadow:none !important; page-break-inside:avoid; }
+    .valor-display,.dim-name,.smart-text,.state-actual,.state-deseado,.summary-tile .value, .reflex-tile .body, .valor-frase{ color:#0d1b2a !important; opacity:1 !important; }
+    .valor-frase{ border-top:1px solid #cfd8e3 !important; }
+    .state-actual{ background:#f5f7fa !important; border:1px solid #cfd8e3 !important; }
+    .state-deseado{ background:#eaf2fb !important; border:1px solid #b8d3ee !important; }
+    .dim-card.fin .state-deseado{ background:#e6f5ee !important; border:1px solid #b8e0ce !important; }
+    .smart-item{ background:#fff !important; border:1px solid #cfd8e3 !important; page-break-inside:avoid; }
+    .smart-letter{ background:#eaf2fb !important; border:1px solid #b8d3ee !important; color:#1f63a8 !important; }
+    .fin .smart-letter{ background:#e6f5ee !important; border:1px solid #b8e0ce !important; color:#127a55 !important; }
+    .card-num{ background:#eaf2fb !important; border:1px solid #b8d3ee !important; color:#1f63a8 !important; }
+    .summary-tile{ background:#fff !important; border:1px solid #cfd8e3 !important; }
+    .reflex-tile{ background:#fff !important; border:1px solid #cfd8e3 !important; }
+    .summary-bar{ background:#e3e9f0 !important; }
+    .footer{ border-top:1px solid #cfd8e3 !important; }
+    .axis text{ fill:#5a6b80 !important; }
+    .axis path, .axis line, .grid line{ stroke:#cfd8e3 !important; }
+    .chk{ border:1.5px solid #5a6b80 !important; background:#fff !important; }
+    .chk:checked{ background:#1f63a8 !important; border-color:#1f63a8 !important; }
+    .chk.fin:checked{ background:#127a55 !important; border-color:#127a55 !important; }
+    .tracker-table thead th.day-today, .tracker-table thead th.day-today .day-num{ color:#1f63a8 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="toolbar" id="toolbar">
+    <button class="btn" id="btn-clear" title="Borra todos los datos guardados">Reiniciar</button>
+    <button class="btn primary" id="btn-print">Exportar PDF</button>
+  </div>
+
+  <!-- ===== Header ===== -->
+  <header class="header">
+    <div>
+      <div class="eyebrow">Bienestar Personal · Entregable</div>
+      <h1>Vision Board Personal</h1>
+      <div class="subtitle">
+        <span>Dimensiones:</span>
+        <span class="pill intel"><span class="dot"></span>Intelectual</span>
+        <span class="pill fin"><span class="dot"></span>Financiero</span>
+      </div>
+    </div>
+    <div class="meta">
+      Estudiante
+      <span class="student" contenteditable="true" data-placeholder="Tu nombre" data-key="student">Nombre y apellido</span>
+      <span class="when">Mayo 2026</span>
+    </div>
+  </header>
+
+  <!-- ===== Card 1 · Valor central ===== -->
+  <section class="card full" aria-labelledby="t1">
+    <div class="card-head">
+      <span class="card-num">01</span>
+      <h2 class="card-title" id="t1">Mi valor central</h2>
+    </div>
+
+    <div class="field-label">El valor que me guía</div>
+    <div class="valor-display" contenteditable="true" data-placeholder="Crecimiento" data-key="valor">Crecimiento</div>
+
+    <div class="valor-frase" contenteditable="true" data-placeholder="Una o dos líneas sobre lo que este valor significa para ti." data-key="valor_frase">Seguir aprendiendo constantemente, probar cosas nuevas y no dejar que el conocimiento se oxide — tanto en desarrollo de software como en fotografía.</div>
+  </section>
+
+  <!-- ===== Dimensiones ===== -->
+  <div class="grid-2">
+    <section class="card dim-card intel" aria-labelledby="t2a">
+      <div class="card-head">
+        <span class="card-num">02</span>
+        <h2 class="card-title" id="t2a">Dimensión Intelectual</h2>
+        <span class="card-tag">Aprendizaje</span>
+      </div>
+
+      <div class="dim-name"><span class="accent-dot"></span>Intelectual</div>
+
+      <div class="compare-block">
+        <div class="field-label">Estado actual</div>
+        <div class="state-actual" contenteditable="true" data-key="intel_actual">Me cuesta concentrarme al estudiar, el teléfono me distrae y siento que lo que aprendo se puede oxidar si no lo repaso.</div>
+      </div>
+      <div class="compare-block">
+        <div class="field-label">Estado deseado</div>
+        <div class="state-deseado" contenteditable="true" data-key="intel_deseado">Aprender de forma consistente, entender a fondo y probar lo que aprendo — en programación, fotografía y más.</div>
+      </div>
+    </section>
+
+    <section class="card dim-card fin" aria-labelledby="t2b">
+      <div class="card-head">
+        <span class="card-num fin">02</span>
+        <h2 class="card-title" id="t2b">Dimensión Financiera</h2>
+        <span class="card-tag">Dinero</span>
+      </div>
+
+      <div class="dim-name"><span class="accent-dot"></span>Financiero</div>
+
+      <div class="compare-block">
+        <div class="field-label">Estado actual</div>
+        <div class="state-actual" contenteditable="true" data-key="fin_actual">Gasto sin registrar, los antojos y gastos hormiga se acumulan sin que los sienta como algo grande.</div>
+      </div>
+      <div class="compare-block">
+        <div class="field-label">Estado deseado</div>
+        <div class="state-deseado" contenteditable="true" data-key="fin_deseado">Claridad de a dónde va mi dinero, fondo de emergencia establecido y responsabilidad financiera real.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Metas SMART ===== -->
+  <div class="grid-2">
+    <section class="card intel" aria-labelledby="t3a">
+      <div class="card-head">
+        <span class="card-num">03</span>
+        <h2 class="card-title" id="t3a">Meta SMART · Intelectual</h2>
+      </div>
+      <div class="smart-list">
+        <div class="smart-item">
+          <div class="smart-letter">S</div>
+          <div class="smart-body">
+            <div class="smart-name">S<span class="dot">·</span><span class="word">Específica</span></div>
+            <div class="smart-text" contenteditable="true" data-key="intel_s">Dedicar tiempo diario a aprender algo nuevo en programación o fotografía y registrar lo aprendido.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">M</div>
+          <div class="smart-body">
+            <div class="smart-name">M<span class="dot">·</span><span class="word">Medible</span></div>
+            <div class="smart-text" contenteditable="true" data-key="intel_m">25 minutos de estudio al día con el teléfono fuera de la vista + escribir al menos una cosa aprendida.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">A</div>
+          <div class="smart-body">
+            <div class="smart-name">A<span class="dot">·</span><span class="word">Alcanzable</span></div>
+            <div class="smart-text" contenteditable="true" data-key="intel_a">Bloques cortos que no requieren condiciones perfectas, solo intención y constancia.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">R</div>
+          <div class="smart-body">
+            <div class="smart-name">R<span class="dot">·</span><span class="word">Relevante</span></div>
+            <div class="smart-text" contenteditable="true" data-key="intel_r">Alineado directamente con mi crecimiento como programador y fotógrafo profesional.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">T</div>
+          <div class="smart-body">
+            <div class="smart-name">T<span class="dot">·</span><span class="word">Con tiempo definido</span></div>
+            <div class="smart-text" contenteditable="true" data-key="intel_t">4 semanas consecutivas, evaluación cada domingo.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card fin" aria-labelledby="t3b">
+      <div class="card-head">
+        <span class="card-num fin">03</span>
+        <h2 class="card-title" id="t3b">Meta SMART · Financiera</h2>
+      </div>
+      <div class="smart-list">
+        <div class="smart-item">
+          <div class="smart-letter">S</div>
+          <div class="smart-body">
+            <div class="smart-name">S<span class="dot">·</span><span class="word">Específica</span></div>
+            <div class="smart-text" contenteditable="true" data-key="fin_s">Registrar todos mis gastos del día y no gastar en antojos sin revisar primero cuánto llevo en la semana.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">M</div>
+          <div class="smart-body">
+            <div class="smart-name">M<span class="dot">·</span><span class="word">Medible</span></div>
+            <div class="smart-text" contenteditable="true" data-key="fin_m">100% de gastos registrados diariamente + separar un % fijo de ahorro cada vez que entre dinero.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">A</div>
+          <div class="smart-body">
+            <div class="smart-name">A<span class="dot">·</span><span class="word">Alcanzable</span></div>
+            <div class="smart-text" contenteditable="true" data-key="fin_a">Solo 5 minutos al final del día y una decisión consciente antes de cada gasto no esencial.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">R</div>
+          <div class="smart-body">
+            <div class="smart-name">R<span class="dot">·</span><span class="word">Relevante</span></div>
+            <div class="smart-text" contenteditable="true" data-key="fin_r">Esencial ahora que empiezo a manejar mayores cantidades de dinero.</div>
+          </div>
+        </div>
+        <div class="smart-item">
+          <div class="smart-letter">T</div>
+          <div class="smart-body">
+            <div class="smart-name">T<span class="dot">·</span><span class="word">Con tiempo definido</span></div>
+            <div class="smart-text" contenteditable="true" data-key="fin_t">4 semanas con revisión semanal cada domingo.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Tracker ===== -->
+  <section class="card full" aria-labelledby="t4">
+    <div class="card-head">
+      <span class="card-num">04</span>
+      <h2 class="card-title" id="t4">Tracker de hábitos · Semana</h2>
+      <div class="card-tag" id="weekRange">—</div>
+    </div>
+
+    <div class="tracker-head">
+      <div class="week-nav" role="group" aria-label="Navegación de semana">
+        <button id="prevWeek" aria-label="Semana anterior">‹</button>
+        <span class="week-label" id="weekLabel">Semana actual</span>
+        <button id="nextWeek" aria-label="Semana siguiente">›</button>
+      </div>
+    </div>
+
+    <table class="tracker-table" id="trackerTable">
+      <thead>
+        <tr>
+          <th class="habit">Hábito</th>
+          <th><span>Lun</span><span class="day-num" data-d="0"></span></th>
+          <th><span>Mar</span><span class="day-num" data-d="1"></span></th>
+          <th><span>Mié</span><span class="day-num" data-d="2"></span></th>
+          <th><span>Jue</span><span class="day-num" data-d="3"></span></th>
+          <th><span>Vie</span><span class="day-num" data-d="4"></span></th>
+          <th><span>Sáb</span><span class="day-num" data-d="5"></span></th>
+          <th><span>Dom</span><span class="day-num" data-d="6"></span></th>
+          <th class="pct">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- rendered by JS -->
+      </tbody>
+    </table>
+
+    <div class="tracker-summary">
+      <div class="summary-tile intel">
+        <div class="label">Cumplimiento intelectual</div>
+        <div class="value" id="pctIntel">0%</div>
+        <div class="summary-bar"><span id="barIntel" style="width:0%"></span></div>
+      </div>
+      <div class="summary-tile fin">
+        <div class="label">Cumplimiento financiero</div>
+        <div class="value" id="pctFin">0%</div>
+        <div class="summary-bar"><span id="barFin" style="width:0%"></span></div>
+      </div>
+      <div class="summary-tile total">
+        <div class="label">Total semana</div>
+        <div class="value" id="pctTotal">0%</div>
+        <div class="summary-bar"><span id="barTotal" style="width:0%"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Stream graph ===== -->
+  <section class="card full" aria-labelledby="t5">
+    <div class="card-head">
+      <span class="card-num">05</span>
+      <h2 class="card-title" id="t5">Evolución mensual · Stream graph</h2>
+      <div class="card-tag" id="chartSourceTag">Datos de ejemplo</div>
+    </div>
+
+    <div class="chart-wrap">
+      <svg id="stream" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
+      <div class="chart-tooltip" id="chartTip" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="chart-legend">
+      <span class="item"><span class="swatch intel"></span> Intelectual</span>
+      <span class="item"><span class="swatch fin"></span> Financiero</span>
+    </div>
+  </section>
+
+  <!-- ===== Reflexión ===== -->
+  <section class="card full" aria-labelledby="t6">
+    <div class="card-head">
+      <span class="card-num">06</span>
+      <h2 class="card-title" id="t6">Reflexión semanal</h2>
+    </div>
+    <div class="reflex-grid">
+      <div class="reflex-tile ok">
+        <div class="head"><span class="ico">✅</span><span>Aciertos de la semana</span></div>
+        <div class="body" contenteditable="true" data-placeholder="¿Qué funcionó? ¿Qué hábitos sostuviste con menos esfuerzo?" data-key="reflex_ok">Mantuve los 25 minutos de estudio sin teléfono casi todos los días entre semana.</div>
+      </div>
+      <div class="reflex-tile warn">
+        <div class="head"><span class="ico">⚠️</span><span>Obstáculos encontrados</span></div>
+        <div class="body" contenteditable="true" data-placeholder="¿Qué te sacó del plan? ¿Cuándo cediste?" data-key="reflex_warn">Los gastos hormiga del fin de semana — registré tarde y subestimé el total.</div>
+      </div>
+      <div class="reflex-tile fix">
+        <div class="head"><span class="ico">🔧</span><span>Ajuste para la próxima semana</span></div>
+        <div class="body" contenteditable="true" data-placeholder="¿Qué vas a cambiar? Una sola cosa concreta." data-key="reflex_fix">Registrar gasto en el momento, no al final del día. Recordatorio a las 21:00.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="date" id="fecha">Mayo 2026</div>
+    <div class="quote">El crecimiento no es un destino, es el hábito de nunca dejar de aprender.</div>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================
+   STATE & STORAGE
+============================================================ */
+const STORAGE_KEY = 'vision-board-v2';
+
+const HABITS = [
+  { id:'h1', dim:'intel', text:'Estudiar 25 min con el teléfono fuera de la vista' },
+  { id:'h2', dim:'intel', text:'Escribir una cosa que aprendí hoy' },
+  { id:'h3', dim:'fin',   text:'Registrar mis gastos del día antes de dormir' },
+  { id:'h4', dim:'fin',   text:'No gastar en antojo sin revisar primero cuánto llevo' }
+];
+
+let state = {
+  texts: {},        // contenteditable values by data-key
+  habits: {},       // habits[weekKey][habitId] = [bool x 7]
+  viewWeekOffset: 0 // 0 = current monday, -1 = previous
+};
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ state = Object.assign(state, JSON.parse(raw)); }
+  }catch(e){}
+  if(!state.texts) state.texts = {};
+  if(!state.habits) state.habits = {};
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   DATES
+============================================================ */
+function mondayOf(d){
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = dt.getDay() || 7; // sunday=7
+  if(day !== 1) dt.setDate(dt.getDate() - (day - 1));
+  return dt;
+}
+function addDays(d, n){
+  const dt = new Date(d); dt.setDate(dt.getDate()+n); return dt;
+}
+function fmtKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtRange(monday){
+  const sunday = addDays(monday,6);
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const a = monday.getDate()+' '+meses[monday.getMonth()];
+  const b = sunday.getDate()+' '+meses[sunday.getMonth()];
+  return `${a} – ${b} · ${monday.getFullYear()}`;
+}
+
+const TODAY = new Date();
+const CURRENT_MONDAY = mondayOf(TODAY);
+
+function viewMonday(){ return addDays(CURRENT_MONDAY, state.viewWeekOffset*7); }
+function viewKey(){ return fmtKey(viewMonday()); }
+
+function ensureWeek(key){
+  if(!state.habits[key]){
+    state.habits[key] = {};
+    HABITS.forEach(h => state.habits[key][h.id] = [false,false,false,false,false,false,false]);
+  } else {
+    HABITS.forEach(h => {
+      if(!Array.isArray(state.habits[key][h.id])){
+        state.habits[key][h.id] = [false,false,false,false,false,false,false];
+      }
+    });
+  }
+}
+
+/* ============================================================
+   EDITABLE TEXTS
+============================================================ */
+function bindEditables(){
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    const k = el.dataset.key;
+    if(state.texts[k] !== undefined && el.classList.contains('value') === false && el.id !== 'fecha'){
+      el.innerHTML = state.texts[k];
+    }
+    el.addEventListener('input', ()=>{
+      state.texts[k] = el.innerHTML;
+      saveState();
+    });
+    el.addEventListener('paste', (e)=>{
+      e.preventDefault();
+      const text = (e.clipboardData||window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+  });
+}
+
+/* ============================================================
+   TRACKER
+============================================================ */
+function renderTrackerHeader(){
+  const monday = viewMonday();
+  for(let i=0;i<7;i++){
+    const el = document.querySelector(`.day-num[data-d="${i}"]`);
+    if(el){ el.textContent = addDays(monday,i).getDate(); }
+    const th = el?.parentElement;
+    if(th){
+      const isToday =
+        state.viewWeekOffset === 0 &&
+        addDays(monday,i).toDateString() === TODAY.toDateString();
+      th.classList.toggle('day-today', isToday);
+    }
+  }
+  document.getElementById('weekRange').textContent = fmtRange(monday);
+  let label = 'Semana actual';
+  if(state.viewWeekOffset < 0) label = `Hace ${Math.abs(state.viewWeekOffset)} sem`;
+  else if(state.viewWeekOffset > 0) label = `+${state.viewWeekOffset} sem`;
+  document.getElementById('weekLabel').textContent = label;
+}
+
+function renderTrackerBody(){
+  const tbody = document.querySelector('#trackerTable tbody');
+  const key = viewKey();
+  ensureWeek(key);
+  const monday = viewMonday();
+
+  tbody.innerHTML = '';
+  HABITS.forEach((h)=>{
+    const row = document.createElement('tr');
+    const arr = state.habits[key][h.id];
+
+    // habit cell
+    const tdH = document.createElement('td');
+    tdH.className = 'habit';
+    tdH.innerHTML = `<span class="badge ${h.dim}">${h.dim==='intel'?'INT':'FIN'}</span>${h.text}`;
+    row.appendChild(tdH);
+
+    // day cells
+    for(let i=0;i<7;i++){
+      const td = document.createElement('td');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'chk' + (h.dim==='fin'?' fin':'');
+      cb.checked = !!arr[i];
+      cb.setAttribute('aria-label', `${h.text} – día ${i+1}`);
+      const isToday = state.viewWeekOffset===0 && addDays(monday,i).toDateString()===TODAY.toDateString();
+      if(isToday) td.classList.add('is-today');
+      cb.addEventListener('change', ()=>{
+        state.habits[key][h.id][i] = cb.checked;
+        saveState();
+        updateSummary();
+        renderStream();
+      });
+      td.appendChild(cb);
+      row.appendChild(td);
+    }
+
+    // pct cell
+    const pctTd = document.createElement('td');
+    pctTd.className = 'pct';
+    pctTd.dataset.habit = h.id;
+    row.appendChild(pctTd);
+
+    tbody.appendChild(row);
+  });
+}
+
+function updateSummary(){
+  const key = viewKey();
+  ensureWeek(key);
+  const data = state.habits[key];
+
+  // per-habit
+  HABITS.forEach(h=>{
+    const arr = data[h.id];
+    const done = arr.filter(Boolean).length;
+    const pct = Math.round((done/7)*100);
+    const td = document.querySelector(`#trackerTable tbody td.pct[data-habit="${h.id}"]`);
+    if(td){
+      td.textContent = pct+'%';
+      td.classList.toggle('is-high', pct>=70);
+    }
+  });
+
+  // dim totals
+  const intelHabits = HABITS.filter(h=>h.dim==='intel');
+  const finHabits   = HABITS.filter(h=>h.dim==='fin');
+  const pctOf = (arr) => {
+    let total=0, done=0;
+    arr.forEach(h => { data[h.id].forEach(v=>{ total++; if(v) done++; }); });
+    return total ? Math.round(done/total*100) : 0;
+  };
+  const pIntel = pctOf(intelHabits);
+  const pFin   = pctOf(finHabits);
+  const pTotal = pctOf(HABITS);
+
+  document.getElementById('pctIntel').textContent = pIntel+'%';
+  document.getElementById('pctFin').textContent   = pFin+'%';
+  document.getElementById('pctTotal').textContent = pTotal+'%';
+  document.getElementById('barIntel').style.width = pIntel+'%';
+  document.getElementById('barFin').style.width   = pFin+'%';
+  document.getElementById('barTotal').style.width = pTotal+'%';
+}
+
+document.getElementById('prevWeek').addEventListener('click', ()=>{
+  state.viewWeekOffset -= 1; renderTracker();
+});
+document.getElementById('nextWeek').addEventListener('click', ()=>{
+  state.viewWeekOffset += 1; renderTracker();
+});
+
+function renderTracker(){
+  renderTrackerHeader();
+  renderTrackerBody();
+  updateSummary();
+}
+
+/* ============================================================
+   STREAM GRAPH (D3) — last 4 weeks
+============================================================ */
+function getChartData(){
+  // Returns array of { week:1..4, intel:0..100, fin:0..100, mondayLabel, isReal }
+  const out = [];
+  let anyReal = false;
+  for(let i=3;i>=0;i--){
+    const m = addDays(CURRENT_MONDAY, -i*7);
+    const k = fmtKey(m);
+    const wd = state.habits[k];
+    let intelPct=0, finPct=0, isReal=false;
+    if(wd){
+      const intelHabits = HABITS.filter(h=>h.dim==='intel');
+      const finHabits   = HABITS.filter(h=>h.dim==='fin');
+      const calc = (arr)=>{
+        let total=0, done=0;
+        arr.forEach(h=>{
+          const a = wd[h.id]||[];
+          a.forEach(v=>{ total++; if(v) done++; });
+        });
+        return total? Math.round(done/total*100):0;
+      };
+      const ci = calc(intelHabits), cf = calc(finHabits);
+      // count any check?
+      const anyChecked = HABITS.some(h => (wd[h.id]||[]).some(Boolean));
+      if(anyChecked){ isReal=true; anyReal=true; intelPct=ci; finPct=cf; }
+    }
+    out.push({
+      week: 4-i,
+      intel: intelPct,
+      fin: finPct,
+      mondayLabel: fmtRange(m),
+      isReal
+    });
+  }
+  return { rows: out, anyReal };
+}
+
+const SAMPLE = [
+  { intel:32, fin:25 },
+  { intel:54, fin:42 },
+  { intel:68, fin:58 },
+  { intel:82, fin:74 }
+];
+
+function renderStream(){
+  const { rows, anyReal } = getChartData();
+  // If no real data yet, mix in sample to demonstrate the chart
+  const display = rows.map((r,i)=> ({
+    ...r,
+    intelDisplay: r.isReal ? r.intel : SAMPLE[i].intel,
+    finDisplay:   r.isReal ? r.fin   : SAMPLE[i].fin
+  }));
+  document.getElementById('chartSourceTag').textContent =
+    anyReal ? 'Datos reales del tracker' : 'Datos de ejemplo';
+  document.getElementById('chartSourceTag').dataset.source = anyReal?'real':'sample';
+
+  const svg = d3.select('#stream');
+  svg.selectAll('*').remove();
+
+  const W = 900, H = 340;
+  const margin = { top:20, right:24, bottom:40, left:44 };
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top - margin.bottom;
+
+  const g = svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+
+  const x = d3.scalePoint().domain(display.map(d=>d.week)).range([0,w]).padding(0.05);
+  const y = d3.scaleLinear().domain([0,100]).range([h,0]);
+
+  // grid
+  g.append('g').attr('class','grid')
+    .call(d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat(''));
+
+  // axes
+  g.append('g').attr('class','axis')
+    .attr('transform',`translate(0,${h})`)
+    .call(d3.axisBottom(x).tickFormat(d=>'Semana '+d));
+  g.append('g').attr('class','axis')
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d=>d+'%'));
+
+  // gradients
+  const defs = svg.append('defs');
+  const grad = (id,color)=>{
+    const lg = defs.append('linearGradient').attr('id',id).attr('x1','0').attr('x2','0').attr('y1','0').attr('y2','1');
+    lg.append('stop').attr('offset','0%').attr('stop-color',color).attr('stop-opacity',0.55);
+    lg.append('stop').attr('offset','100%').attr('stop-color',color).attr('stop-opacity',0.05);
+  };
+  grad('gradIntel','#378add');
+  grad('gradFin','#1d9e75');
+
+  const area = (key) => d3.area()
+    .x(d=>x(d.week))
+    .y0(h)
+    .y1(d=>y(d[key]))
+    .curve(d3.curveMonotoneX);
+  const line = (key) => d3.line()
+    .x(d=>x(d.week))
+    .y(d=>y(d[key]))
+    .curve(d3.curveMonotoneX);
+
+  // draw fin first then intel (intel a bit more prominent)
+  g.append('path')
+    .datum(display)
+    .attr('fill','url(#gradFin)')
+    .attr('d', area('finDisplay'));
+  g.append('path')
+    .datum(display)
+    .attr('fill','none')
+    .attr('stroke','#1d9e75')
+    .attr('stroke-width',2.5)
+    .attr('d', line('finDisplay'));
+
+  g.append('path')
+    .datum(display)
+    .attr('fill','url(#gradIntel)')
+    .attr('d', area('intelDisplay'));
+  g.append('path')
+    .datum(display)
+    .attr('fill','none')
+    .attr('stroke','#378add')
+    .attr('stroke-width',2.5)
+    .attr('d', line('intelDisplay'));
+
+  // points
+  const pt = (key,color) => {
+    g.selectAll(`.pt-${key}`).data(display).enter().append('circle')
+      .attr('class','pt-'+key)
+      .attr('cx',d=>x(d.week))
+      .attr('cy',d=>y(d[key]))
+      .attr('r',4)
+      .attr('fill','#0d1b2a')
+      .attr('stroke',color)
+      .attr('stroke-width',2);
+  };
+  pt('finDisplay','#1d9e75');
+  pt('intelDisplay','#378add');
+
+  // hover
+  const tip = document.getElementById('chartTip');
+  const wrap = document.querySelector('.chart-wrap');
+  const hover = g.append('g').style('display','none');
+  hover.append('line')
+    .attr('y1',0).attr('y2',h)
+    .attr('stroke','rgba(255,255,255,.25)')
+    .attr('stroke-dasharray','3 3');
+
+  const overlay = g.append('rect')
+    .attr('width',w).attr('height',h)
+    .attr('fill','transparent')
+    .style('cursor','crosshair');
+
+  overlay.on('mouseenter', ()=>{ hover.style('display',null); tip.style.opacity=1; });
+  overlay.on('mouseleave', ()=>{ hover.style('display','none'); tip.style.opacity=0; });
+  overlay.on('mousemove', function(event){
+    const [mx] = d3.pointer(event,this);
+    // find nearest week
+    let best = display[0], bestD = Infinity;
+    display.forEach(d=>{
+      const dx = Math.abs(x(d.week)-mx);
+      if(dx<bestD){ bestD=dx; best=d; }
+    });
+    const cx = x(best.week);
+    hover.select('line').attr('x1',cx).attr('x2',cx);
+
+    // tooltip position relative to wrap
+    const wrapRect = wrap.getBoundingClientRect();
+    const svgEl = svg.node();
+    const ctm = svgEl.getScreenCTM();
+    const pt = svgEl.createSVGPoint();
+    pt.x = cx + margin.left;
+    pt.y = Math.min(y(best.intelDisplay), y(best.finDisplay)) + margin.top;
+    const screen = pt.matrixTransform(ctm);
+    tip.style.left = (screen.x - wrapRect.left) + 'px';
+    tip.style.top  = (screen.y - wrapRect.top)  + 'px';
+    tip.innerHTML = `
+      <div class="ttl">Semana ${best.week} · ${best.isReal?'real':'ejemplo'}</div>
+      <div class="row"><span class="sw" style="background:#378add"></span><span class="name">Intelectual</span><span class="v">${best.intelDisplay}%</span></div>
+      <div class="row"><span class="sw" style="background:#1d9e75"></span><span class="name">Financiero</span><span class="v">${best.finDisplay}%</span></div>
+    `;
+  });
+}
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+document.getElementById('btn-print').addEventListener('click', ()=>window.print());
+document.getElementById('btn-clear').addEventListener('click', ()=>{
+  if(!confirm('¿Reiniciar todos los datos? Esto borra hábitos, reflexiones y textos editados.')) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  location.reload();
+});
+
+/* ============================================================
+   BOOT
+============================================================ */
+loadState();
+bindEditables();
+renderTracker();
+renderStream();
+window.addEventListener('resize', ()=>renderStream());
+</script>
+</body>
+</html>
