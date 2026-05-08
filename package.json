@@ -1,0 +1,25 @@
+{
+  "name": "un-viaje-en-mi-interior",
+  "version": "1.0.0",
+  "description": "Vision Board personal interactivo — entregable académico de bienestar personal",
+  "scripts": {
+    "dev": "serve . -p 3000 --no-clipboard",
+    "start": "serve . -p 3000 --no-clipboard",
+    "build": "echo 'Static site — no build step needed'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Paco-Sauceda/un-viaje-en-mi-interior.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Paco-Sauceda/un-viaje-en-mi-interior/issues"
+  },
+  "homepage": "https://github.com/Paco-Sauceda/un-viaje-en-mi-interior#readme",
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}
