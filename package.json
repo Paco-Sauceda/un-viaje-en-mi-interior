@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Vision Board personal interactivo — entregable académico de bienestar personal",
   "scripts": {
-    "dev": "serve . -p 3000 --no-clipboard",
-    "start": "serve . -p 3000 --no-clipboard",
+    "dev": "serve public -p 3000 --no-clipboard",
+    "start": "serve public -p 3000 --no-clipboard",
     "build": "echo 'Static site — no build step needed'"
   },
   "repository": {
